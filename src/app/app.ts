@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 interface ExtraPayment {
@@ -114,6 +114,9 @@ export class App implements OnInit {
   protected readonly languageOptions: AppLanguage[] = ['en', 'ka'];
   protected aiStatus: 'idle' | 'loading' | 'connected' | 'error' = 'idle';
   protected aiErrorMessage = '';
+  protected isCompactLayout = false;
+  protected readonly mobileScheduleStep = 24;
+  protected mobileScheduleVisibleRows = this.mobileScheduleStep;
 
   private readonly i18n: Record<AppLanguage, Record<string, string>> = {
     en: {
@@ -133,6 +136,7 @@ export class App implements OnInit {
       'input.fixedCommission': 'Fixed commission',
       'prepay.title': 'Extra prepayments',
       'common.add': 'Add',
+      'common.showMoreRows': 'Show {count} more months',
       'prepay.month': 'Month',
       'prepay.amount': 'Amount',
       'prepay.effect': 'Effect',
@@ -259,6 +263,7 @@ export class App implements OnInit {
       'input.fixedCommission': 'ფიქსირებული საკომისიო',
       'prepay.title': 'დამატებითი წინსწრებითი გადახდები',
       'common.add': 'დამატება',
+      'common.showMoreRows': 'აჩვენე კიდევ {count} თვე',
       'prepay.month': 'თვე',
       'prepay.amount': 'თანხა',
       'prepay.effect': 'ეფექტი',
@@ -409,6 +414,7 @@ export class App implements OnInit {
   protected aiCoachSummary: AICoachSummary | null = null;
 
   private readonly storageKey = 'mortgage-os-state-v1';
+  private readonly compactLayoutMaxWidth = 760;
   private nextExtraPaymentId = 3;
   private readonly maxScheduleMonths = 1200;
   private readonly paymentMixMaxBars = 18;
@@ -429,8 +435,14 @@ export class App implements OnInit {
   };
 
   ngOnInit(): void {
+    this.syncLayoutMode();
     this.restoreFromStorage();
     this.recalculate();
+  }
+
+  @HostListener('window:resize')
+  protected onWindowResize(): void {
+    this.syncLayoutMode();
   }
 
   protected addExtraPayment(): void {
@@ -457,6 +469,7 @@ export class App implements OnInit {
 
   protected recalculate(): void {
     this.errorMessage = '';
+    this.mobileScheduleVisibleRows = this.mobileScheduleStep;
     this.aiRequestToken += 1;
     this.aiModelTips = [];
     this.aiCoachSummary = null;
@@ -599,6 +612,25 @@ export class App implements OnInit {
     return this.aiStatus === 'connected' ? this.t('ai.refresh') : this.t('ai.connect');
   }
 
+  protected get visibleScheduleRows(): AmortizationRow[] {
+    if (!this.isCompactLayout) {
+      return this.planRows;
+    }
+
+    return this.planRows.slice(0, this.mobileScheduleVisibleRows);
+  }
+
+  protected get hasMoreScheduleRows(): boolean {
+    return this.isCompactLayout && this.mobileScheduleVisibleRows < this.planRows.length;
+  }
+
+  protected showMoreScheduleRows(): void {
+    this.mobileScheduleVisibleRows = Math.min(
+      this.mobileScheduleVisibleRows + this.mobileScheduleStep,
+      this.planRows.length
+    );
+  }
+
   protected barTitle(bar: PaymentMixBar): string {
     return `${this.t('bar.title.year')} ${bar.year}
 ${this.t('bar.title.principal')}: ${bar.principalPaid.toFixed(2)} ${this.currency} (${bar.principalPct.toFixed(2)}%)
@@ -726,6 +758,15 @@ ${this.t('bar.title.total')}: ${bar.totalPaid.toFixed(2)} ${this.currency}`;
 
       this.cdr.detectChanges();
     }, delayMs);
+  }
+
+  private syncLayoutMode(): void {
+    if (typeof window === 'undefined') {
+      this.isCompactLayout = false;
+      return;
+    }
+
+    this.isCompactLayout = window.innerWidth <= this.compactLayoutMaxWidth;
   }
 
   private buildExtraPaymentMap(): Map<number, ExtraPaymentBucket> {

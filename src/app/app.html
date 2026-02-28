@@ -99,22 +99,15 @@
         <div class="subcard prepay">
           <div class="prepay-head">
             <h3>{{ t('prepay.title') }}</h3>
-            <button type="button" (click)="addExtraPayment()">{{ t('common.add') }}</button>
+            <button type="button" class="prepay-add" (click)="addExtraPayment()">{{ t('common.add') }}</button>
           </div>
-          <div class="table-shell short">
-            <table>
-              <thead>
-                <tr>
-                  <th>{{ t('prepay.month') }}</th>
-                  <th>{{ t('prepay.amount') }}</th>
-                  <th>{{ t('prepay.effect') }}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of extraPayments; track item.id) {
-                  <tr>
-                    <td>
+          @if (isCompactLayout) {
+            <div class="prepay-cards">
+              @for (item of extraPayments; track item.id) {
+                <article class="prepay-card">
+                  <div class="prepay-card-grid">
+                    <label>
+                      <span>{{ t('prepay.month') }}</span>
                       <input
                         type="number"
                         min="1"
@@ -122,8 +115,9 @@
                         [(ngModel)]="item.month"
                         (ngModelChange)="recalculate()"
                       />
-                    </td>
-                    <td>
+                    </label>
+                    <label>
+                      <span>{{ t('prepay.amount') }}</span>
                       <input
                         type="number"
                         min="0"
@@ -131,24 +125,72 @@
                         [(ngModel)]="item.amount"
                         (ngModelChange)="recalculate()"
                       />
-                    </td>
-                    <td>
+                    </label>
+                    <label class="prepay-card-strategy">
+                      <span>{{ t('prepay.effect') }}</span>
                       <select [(ngModel)]="item.strategy" (ngModelChange)="recalculate()">
                         @for (strategy of prepaymentStrategyOptions; track strategy) {
                           <option [ngValue]="strategy">{{ prepaymentStrategyLabel(strategy) }}</option>
                         }
                       </select>
-                    </td>
-                    <td>
-                      <button type="button" class="remove" (click)="removeExtraPayment(item.id)">
-                        {{ t('common.remove') }}
-                      </button>
-                    </td>
+                    </label>
+                  </div>
+                  <button type="button" class="remove prepay-remove" (click)="removeExtraPayment(item.id)">
+                    {{ t('common.remove') }}
+                  </button>
+                </article>
+              }
+            </div>
+          } @else {
+            <div class="table-shell short prepay-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ t('prepay.month') }}</th>
+                    <th>{{ t('prepay.amount') }}</th>
+                    <th>{{ t('prepay.effect') }}</th>
+                    <th></th>
                   </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  @for (item of extraPayments; track item.id) {
+                    <tr>
+                      <td>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          [(ngModel)]="item.month"
+                          (ngModelChange)="recalculate()"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          [(ngModel)]="item.amount"
+                          (ngModelChange)="recalculate()"
+                        />
+                      </td>
+                      <td>
+                        <select [(ngModel)]="item.strategy" (ngModelChange)="recalculate()">
+                          @for (strategy of prepaymentStrategyOptions; track strategy) {
+                            <option [ngValue]="strategy">{{ prepaymentStrategyLabel(strategy) }}</option>
+                          }
+                        </select>
+                      </td>
+                      <td>
+                        <button type="button" class="remove" (click)="removeExtraPayment(item.id)">
+                          {{ t('common.remove') }}
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         </div>
       </section>
 
@@ -281,38 +323,84 @@
             </article>
           </div>
 
-          <div class="table-shell">
-            <table>
-              <thead>
-                <tr>
-                  <th>{{ t('schedule.date') }}</th>
-                  <th>{{ t('schedule.payment') }}</th>
-                  <th>{{ t('schedule.principal') }}</th>
-                  <th>{{ t('schedule.interest') }}</th>
-                  <th>{{ t('schedule.commission') }}</th>
-                  <th>{{ t('schedule.extra') }}</th>
-                  <th>{{ t('schedule.startingBalance') }}</th>
-                  <th>{{ t('schedule.endingBalance') }}</th>
-                  <th>{{ t('schedule.savedInterest') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of planRows; track row.month) {
+          @if (isCompactLayout) {
+            <div class="schedule-cards">
+              @for (row of visibleScheduleRows; track row.month) {
+                <article class="schedule-card">
+                  <header class="schedule-card-head">
+                    <strong>{{ t('prepay.month') }} {{ row.month }}</strong>
+                    <small>{{ row.dueDate | date: 'dd MMM yyyy' }}</small>
+                  </header>
+                  <div class="schedule-kv payment">
+                    <span>{{ t('schedule.payment') }}</span>
+                    <b>{{ row.totalPaymentDue | number: '1.2-2' }}</b>
+                  </div>
+                  <div class="schedule-kv">
+                    <span>{{ t('schedule.principal') }}</span>
+                    <b>{{ row.principalPaid | number: '1.2-2' }}</b>
+                  </div>
+                  <div class="schedule-kv">
+                    <span>{{ t('schedule.interest') }}</span>
+                    <b>{{ row.interestPaid | number: '1.2-2' }}</b>
+                  </div>
+                  <div class="schedule-kv">
+                    <span>{{ t('schedule.commission') }}</span>
+                    <b>{{ row.commissionPaid | number: '1.2-2' }}</b>
+                  </div>
+                  <div class="schedule-kv">
+                    <span>{{ t('schedule.extra') }}</span>
+                    <b>{{ row.extraPayment | number: '1.2-2' }}</b>
+                  </div>
+                  <div class="schedule-kv">
+                    <span>{{ t('schedule.endingBalance') }}</span>
+                    <b>{{ row.endingBalance | number: '1.2-2' }}</b>
+                  </div>
+                  <div class="schedule-kv emphasis">
+                    <span>{{ t('schedule.savedInterest') }}</span>
+                    <b>{{ row.cumulativeInterestSaved | number: '1.2-2' }}</b>
+                  </div>
+                </article>
+              }
+            </div>
+            @if (hasMoreScheduleRows) {
+              <button type="button" class="schedule-more" (click)="showMoreScheduleRows()">
+                {{ t('common.showMoreRows', { count: mobileScheduleStep }) }}
+              </button>
+            }
+          } @else {
+            <div class="table-shell">
+              <table>
+                <thead>
                   <tr>
-                    <td>{{ row.dueDate | date: 'dd/MM/yyyy' }}</td>
-                    <td>{{ row.totalPaymentDue | number: '1.2-2' }}</td>
-                    <td>{{ row.principalPaid | number: '1.2-2' }}</td>
-                    <td>{{ row.interestPaid | number: '1.2-2' }}</td>
-                    <td>{{ row.commissionPaid | number: '1.2-2' }}</td>
-                    <td>{{ row.extraPayment | number: '1.2-2' }}</td>
-                    <td>{{ row.startingBalance | number: '1.2-2' }}</td>
-                    <td>{{ row.endingBalance | number: '1.2-2' }}</td>
-                    <td>{{ row.cumulativeInterestSaved | number: '1.2-2' }}</td>
+                    <th>{{ t('schedule.date') }}</th>
+                    <th>{{ t('schedule.payment') }}</th>
+                    <th>{{ t('schedule.principal') }}</th>
+                    <th>{{ t('schedule.interest') }}</th>
+                    <th>{{ t('schedule.commission') }}</th>
+                    <th>{{ t('schedule.extra') }}</th>
+                    <th>{{ t('schedule.startingBalance') }}</th>
+                    <th>{{ t('schedule.endingBalance') }}</th>
+                    <th>{{ t('schedule.savedInterest') }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  @for (row of planRows; track row.month) {
+                    <tr>
+                      <td>{{ row.dueDate | date: 'dd/MM/yyyy' }}</td>
+                      <td>{{ row.totalPaymentDue | number: '1.2-2' }}</td>
+                      <td>{{ row.principalPaid | number: '1.2-2' }}</td>
+                      <td>{{ row.interestPaid | number: '1.2-2' }}</td>
+                      <td>{{ row.commissionPaid | number: '1.2-2' }}</td>
+                      <td>{{ row.extraPayment | number: '1.2-2' }}</td>
+                      <td>{{ row.startingBalance | number: '1.2-2' }}</td>
+                      <td>{{ row.endingBalance | number: '1.2-2' }}</td>
+                      <td>{{ row.cumulativeInterestSaved | number: '1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
         </section>
       }
     </section>
