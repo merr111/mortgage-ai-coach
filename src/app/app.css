@@ -312,6 +312,27 @@ select:focus {
   gap: 0.5rem;
 }
 
+.prepay-breakdown {
+  border: 1px solid #dce8f1;
+  border-radius: 10px;
+  padding: 0.52rem 0.58rem;
+  background: #f7fbfe;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.prepay-breakdown span {
+  color: #5a6f7e;
+  font-size: 0.74rem;
+}
+
+.prepay-breakdown strong {
+  color: #1f323f;
+  font-size: 0.85rem;
+}
+
 .prepay-card-strategy {
   grid-column: 1 / -1;
 }
@@ -319,6 +340,81 @@ select:focus {
 .prepay-remove {
   margin-top: 0.56rem;
   width: 100%;
+}
+
+.saved-spotlight {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #cfe5dc;
+  border-radius: 16px;
+  padding: 0.95rem 0.95rem 0.85rem;
+  margin-bottom: 0.84rem;
+  background:
+    radial-gradient(circle at 95% -10%, rgba(255, 225, 156, 0.35), transparent 55%),
+    linear-gradient(135deg, #eaf8f3 0%, #dcf4ed 50%, #f4fbf8 100%);
+  box-shadow: 0 10px 22px rgba(12, 80, 75, 0.12);
+}
+
+.saved-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: auto -18% -50% auto;
+  width: 180px;
+  height: 180px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 208, 111, 0.28) 0%, rgba(255, 208, 111, 0) 66%);
+}
+
+.saved-spotlight-label {
+  margin: 0;
+  color: #2e6658;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.saved-spotlight strong {
+  margin-top: 0.26rem;
+  display: block;
+  line-height: 1.05;
+  color: #0f3c32;
+  font-size: clamp(1.9rem, 4vw, 2.75rem);
+  font-weight: 800;
+}
+
+.saved-spotlight strong small {
+  margin-left: 0.3rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #2f5f52;
+  vertical-align: top;
+}
+
+.saved-spotlight-hint {
+  margin: 0.34rem 0 0;
+  color: #335f53;
+  font-size: 0.78rem;
+}
+
+.saved-spotlight-meta {
+  margin-top: 0.54rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+}
+
+.saved-spotlight-meta span {
+  border: 1px solid rgba(20, 80, 67, 0.16);
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: #2e5a4f;
+  font-size: 0.72rem;
+}
+
+.saved-spotlight-meta b {
+  color: #1a473d;
 }
 
 .metrics {
@@ -651,7 +747,7 @@ select:focus {
 }
 
 .table-shell.short table {
-  min-width: 620px;
+  min-width: 760px;
 }
 
 table {
@@ -1032,6 +1128,16 @@ th {
     height: 26px;
   }
 
+  .saved-spotlight {
+    border-radius: 14px;
+    padding: 0.82rem 0.82rem 0.78rem;
+  }
+
+  .saved-spotlight-meta {
+    display: grid;
+    gap: 0.38rem;
+  }
+
   .prepay-head {
     align-items: stretch;
     flex-direction: column;
@@ -1078,7 +1184,7 @@ th {
   }
 
   .table-shell.short table {
-    min-width: 540px;
+    min-width: 680px;
   }
 
   table {
@@ -1114,6 +1220,10 @@ th {
 
   .metrics {
     grid-template-columns: 1fr;
+  }
+
+  .saved-spotlight strong {
+    font-size: 1.95rem;
   }
 
   .prepay-card-grid {

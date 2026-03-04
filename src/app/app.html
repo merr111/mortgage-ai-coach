@@ -117,15 +117,23 @@
                       />
                     </label>
                     <label>
-                      <span>{{ t('prepay.amount') }}</span>
+                      <span>{{ t('prepay.totalPaid') }}</span>
                       <input
                         type="number"
                         min="0"
                         step="0.01"
-                        [(ngModel)]="item.amount"
+                        [(ngModel)]="item.totalPaid"
                         (ngModelChange)="recalculate()"
                       />
                     </label>
+                    <div class="prepay-breakdown">
+                      <span>{{ t('prepay.requiredDue') }}</span>
+                      <strong>{{ item.requiredDue | number: '1.2-2' }}</strong>
+                    </div>
+                    <div class="prepay-breakdown">
+                      <span>{{ t('prepay.calculatedExtra') }}</span>
+                      <strong>{{ item.amount | number: '1.2-2' }}</strong>
+                    </div>
                     <label class="prepay-card-strategy">
                       <span>{{ t('prepay.effect') }}</span>
                       <select [(ngModel)]="item.strategy" (ngModelChange)="recalculate()">
@@ -147,7 +155,9 @@
                 <thead>
                   <tr>
                     <th>{{ t('prepay.month') }}</th>
-                    <th>{{ t('prepay.amount') }}</th>
+                    <th>{{ t('prepay.totalPaid') }}</th>
+                    <th>{{ t('prepay.requiredDue') }}</th>
+                    <th>{{ t('prepay.calculatedExtra') }}</th>
                     <th>{{ t('prepay.effect') }}</th>
                     <th></th>
                   </tr>
@@ -169,10 +179,12 @@
                           type="number"
                           min="0"
                           step="0.01"
-                          [(ngModel)]="item.amount"
+                          [(ngModel)]="item.totalPaid"
                           (ngModelChange)="recalculate()"
                         />
                       </td>
+                      <td>{{ item.requiredDue | number: '1.2-2' }}</td>
+                      <td>{{ item.amount | number: '1.2-2' }}</td>
                       <td>
                         <select [(ngModel)]="item.strategy" (ngModelChange)="recalculate()">
                           @for (strategy of prepaymentStrategyOptions; track strategy) {
@@ -206,6 +218,19 @@
             <p>{{ errorMessage }}</p>
           </div>
         } @else {
+          <article class="saved-spotlight">
+            <p class="saved-spotlight-label">{{ t('hero.savedTitle') }}</p>
+            <strong>
+              {{ totalCostSaved | number: '1.2-2' }}
+              <small>{{ currency }}</small>
+            </strong>
+            <p class="saved-spotlight-hint">{{ t('hero.savedHint') }}</p>
+            <div class="saved-spotlight-meta">
+              <span>{{ t('hero.savedMonths') }}: <b>{{ monthsReduced }}</b></span>
+              <span>{{ t('metric.interestSaved') }}: <b>{{ interestSaved | number: '1.2-2' }} {{ currency }}</b></span>
+            </div>
+          </article>
+
           <div class="metrics">
             <article>
               <p>{{ t('metric.basePayment') }}</p>
@@ -372,6 +397,7 @@
               <table>
                 <thead>
                   <tr>
+                    <th>{{ t('schedule.month') }}</th>
                     <th>{{ t('schedule.date') }}</th>
                     <th>{{ t('schedule.payment') }}</th>
                     <th>{{ t('schedule.principal') }}</th>
@@ -386,6 +412,7 @@
                 <tbody>
                   @for (row of planRows; track row.month) {
                     <tr>
+                      <td>{{ row.month }}</td>
                       <td>{{ row.dueDate | date: 'dd/MM/yyyy' }}</td>
                       <td>{{ row.totalPaymentDue | number: '1.2-2' }}</td>
                       <td>{{ row.principalPaid | number: '1.2-2' }}</td>

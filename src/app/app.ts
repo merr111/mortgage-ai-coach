@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 interface ExtraPayment {
   id: number;
   month: number;
+  totalPaid?: number;
+  requiredDue?: number;
   amount: number;
   strategy: PrepaymentStrategy;
 }
@@ -139,6 +141,9 @@ export class App implements OnInit {
       'common.showMoreRows': 'Show {count} more months',
       'prepay.month': 'Month',
       'prepay.amount': 'Amount',
+      'prepay.totalPaid': 'Total paid',
+      'prepay.requiredDue': 'Required due',
+      'prepay.calculatedExtra': 'Calculated extra',
       'prepay.effect': 'Effect',
       'common.remove': 'Remove',
       'panel.results.title': 'Results',
@@ -149,6 +154,9 @@ export class App implements OnInit {
       'metric.commissionSaved': 'Commission saved',
       'metric.totalSaved': 'Total saved',
       'metric.totalInterestToPay': 'Total interest you will pay by the end',
+      'hero.savedTitle': 'Total Savings',
+      'hero.savedHint': 'Live impact from your extra payment strategy.',
+      'hero.savedMonths': 'Months reduced',
       'chart.title': 'Interest vs Principal (Yearly)',
       'chart.principal': 'Principal',
       'chart.interest': 'Interest',
@@ -165,6 +173,7 @@ export class App implements OnInit {
       'schedule.payoffDate': 'Payoff date',
       'schedule.monthsReduced': 'Months reduced',
       'schedule.totalSaved': 'Total saved',
+      'schedule.month': 'Month',
       'schedule.date': 'Date',
       'schedule.payment': 'Payment',
       'schedule.principal': 'Principal',
@@ -266,6 +275,9 @@ export class App implements OnInit {
       'common.showMoreRows': 'აჩვენე კიდევ {count} თვე',
       'prepay.month': 'თვე',
       'prepay.amount': 'თანხა',
+      'prepay.totalPaid': 'სულ გადახდილი',
+      'prepay.requiredDue': 'სავალდებულო გადასახდელი',
+      'prepay.calculatedExtra': 'ავტომატურად დათვლილი დამატებითი',
       'prepay.effect': 'ეფექტი',
       'common.remove': 'წაშლა',
       'panel.results.title': 'შედეგები',
@@ -276,6 +288,9 @@ export class App implements OnInit {
       'metric.commissionSaved': 'დაზოგილი საკომისიო',
       'metric.totalSaved': 'ჯამური დაზოგვა',
       'metric.totalInterestToPay': 'სულ რამდენ პროცენტს გადაიხდით ბოლომდე',
+      'hero.savedTitle': 'ჯამურად დაზოგილი',
+      'hero.savedHint': 'დამატებითი გადახდების სტრატეგიის ცოცხალი შედეგი.',
+      'hero.savedMonths': 'შემცირებული თვეები',
       'chart.title': 'პროცენტი vs ძირი (წლიურად)',
       'chart.principal': 'ძირი',
       'chart.interest': 'პროცენტი',
@@ -292,6 +307,7 @@ export class App implements OnInit {
       'schedule.payoffDate': 'დასრულების თარიღი',
       'schedule.monthsReduced': 'შემცირებული თვეები',
       'schedule.totalSaved': 'ჯამური დაზოგვა',
+      'schedule.month': 'თვე',
       'schedule.date': 'თარიღი',
       'schedule.payment': 'გადასახდელი თანხა',
       'schedule.principal': 'ძირი',
@@ -399,8 +415,8 @@ export class App implements OnInit {
   ];
 
   protected extraPayments: ExtraPayment[] = [
-    { id: 1, month: 3, amount: 17059.17, strategy: 'reduceTime' },
-    { id: 2, month: 9, amount: 26700, strategy: 'reduceTime' }
+    { id: 1, month: 3, totalPaid: 17059.17, requiredDue: 0, amount: 0, strategy: 'reduceTime' },
+    { id: 2, month: 9, totalPaid: 26700, requiredDue: 0, amount: 0, strategy: 'reduceTime' }
   ];
 
   protected paymentUsed = 0;
@@ -446,12 +462,21 @@ export class App implements OnInit {
   }
 
   protected addExtraPayment(): void {
+    const lastMonth = this.extraPayments.reduce(
+      (maxMonth, item) => Math.max(maxMonth, Math.max(1, Math.round(item.month))),
+      0
+    );
+    const nextMonth = lastMonth > 0 ? lastMonth + 1 : 1;
+    const suggestedTotalPaid = this.requiredDueForMonth(nextMonth);
+
     this.extraPayments = [
       ...this.extraPayments,
       {
         id: this.nextExtraPaymentId++,
-        month: Math.min(this.loanTermMonths, 12),
-        amount: 1000,
+        month: nextMonth,
+        totalPaid: suggestedTotalPaid,
+        requiredDue: 0,
+        amount: 0,
         strategy: 'reduceTime'
       }
     ];
@@ -498,6 +523,8 @@ export class App implements OnInit {
     }
 
     this.paymentUsed = payment;
+    this.rebuildExtraPaymentBreakdown(principal, monthlyRate, payment, initialTermMonths);
+    this.saveToStorage();
 
     try {
       const baseline = this.buildSchedule(
@@ -700,16 +727,21 @@ ${this.t('bar.title.total')}: ${bar.totalPaid.toFixed(2)} ${this.currency}`;
       const existing = next[existingIndex];
       next[existingIndex] = {
         ...existing,
-        amount: this.roundMoney(existing.amount + amount)
+        totalPaid: this.roundMoney(
+          this.normalizeMoney(existing.totalPaid ?? existing.amount) + amount
+        )
       };
       this.extraPayments = next;
     } else {
+      const requiredDue = this.requiredDueForMonth(month);
       this.extraPayments = [
         ...this.extraPayments,
         {
           id: this.nextExtraPaymentId++,
           month,
-          amount,
+          totalPaid: this.roundMoney(requiredDue + amount),
+          requiredDue: 0,
+          amount: 0,
           strategy: 'reduceTime'
         }
       ];
@@ -758,6 +790,132 @@ ${this.t('bar.title.total')}: ${bar.totalPaid.toFixed(2)} ${this.currency}`;
 
       this.cdr.detectChanges();
     }, delayMs);
+  }
+
+  private requiredDueForMonth(month: number): number {
+    const normalizedMonth = Math.max(1, Math.round(month));
+    const row = this.baselineRows.find((item) => item.month === normalizedMonth);
+
+    if (row) {
+      return this.roundMoney(this.normalizeMoney(row.totalPaymentDue));
+    }
+
+    return this.roundMoney(this.normalizeMoney(this.paymentUsed));
+  }
+
+  private rebuildExtraPaymentBreakdown(
+    principal: number,
+    monthlyRate: number,
+    monthlyPayment: number,
+    initialTermMonths: number
+  ): void {
+    if (this.extraPayments.length === 0) {
+      return;
+    }
+
+    type NormalizedExtra = {
+      id: number;
+      month: number;
+      totalPaid: number;
+      requiredDue: number;
+      amount: number;
+      strategy: PrepaymentStrategy;
+      index: number;
+    };
+    const normalized = this.extraPayments.map((item, index) => {
+      const totalPaidSource = this.normalizeMoney(item.totalPaid ?? item.amount);
+      return {
+        ...item,
+        index,
+        month: Math.max(1, Math.round(item.month)),
+        totalPaid: totalPaidSource,
+        requiredDue: this.normalizeMoney(item.requiredDue ?? 0),
+        amount: this.normalizeMoney(item.amount)
+      } satisfies NormalizedExtra;
+    });
+
+    const byMonth = new Map<number, NormalizedExtra[]>();
+    for (const entry of normalized) {
+      const bucket = byMonth.get(entry.month) ?? [];
+      bucket.push(entry);
+      byMonth.set(entry.month, bucket);
+    }
+
+    const maxMonth = Math.max(1, ...normalized.map((entry) => entry.month));
+    let balance = principal;
+    let currentMonthlyPayment = monthlyPayment;
+
+    for (let month = 1; month <= maxMonth; month += 1) {
+      const monthEntries = byMonth.get(month) ?? [];
+
+      if (balance <= 0.0000001) {
+        for (const entry of monthEntries) {
+          entry.requiredDue = 0;
+          entry.amount = 0;
+        }
+        continue;
+      }
+
+      const startingBalance = balance;
+      const interestPaid = startingBalance * monthlyRate;
+
+      if (currentMonthlyPayment <= interestPaid + 1e-8) {
+        for (const entry of monthEntries) {
+          entry.requiredDue = 0;
+          entry.amount = 0;
+        }
+        break;
+      }
+
+      const scheduledPayment = Math.min(currentMonthlyPayment, startingBalance + interestPaid);
+      const principalPaid = scheduledPayment - interestPaid;
+      const commissionPaid = this.calculateCommission(startingBalance, interestPaid);
+      const totalPaymentDue = scheduledPayment + commissionPaid;
+
+      let requestedExtraTotal = 0;
+      const requestedExtras = monthEntries.map((entry, index) => {
+        const requiredDue = index === 0 ? totalPaymentDue : 0;
+        entry.requiredDue = requiredDue;
+        const requestedExtra = Math.max(0, this.normalizeMoney(entry.totalPaid) - requiredDue);
+        requestedExtraTotal += requestedExtra;
+        return { entry, requestedExtra };
+      });
+
+      const availableExtra = Math.max(0, startingBalance - principalPaid);
+      const extraScale =
+        requestedExtraTotal > availableExtra && requestedExtraTotal > 0
+          ? availableExtra / requestedExtraTotal
+          : 1;
+
+      let appliedExtraTotal = 0;
+      let appliedReducePayment = 0;
+
+      for (const { entry, requestedExtra } of requestedExtras) {
+        const appliedExtra = requestedExtra * extraScale;
+        entry.amount = appliedExtra;
+        appliedExtraTotal += appliedExtra;
+
+        if (entry.strategy === 'reducePayment') {
+          appliedReducePayment += appliedExtra;
+        }
+      }
+
+      balance = Math.max(0, startingBalance - principalPaid - appliedExtraTotal);
+
+      if (appliedReducePayment > 0 && balance > 0.0000001) {
+        const monthsAfterCurrent = Math.max(1, initialTermMonths - month);
+        currentMonthlyPayment = this.calculateMonthlyPayment(balance, monthlyRate, monthsAfterCurrent);
+      }
+    }
+
+    this.extraPayments = normalized
+      .sort((a, b) => a.index - b.index)
+      .map(({ index: _index, ...entry }) => ({
+        ...entry,
+        totalPaid: this.roundMoney(this.normalizeMoney(entry.totalPaid)),
+        requiredDue: this.roundMoney(this.normalizeMoney(entry.requiredDue)),
+        amount: this.roundMoney(this.normalizeMoney(entry.amount))
+      }));
   }
 
   private syncLayoutMode(): void {
@@ -1298,23 +1456,29 @@ ${this.t('bar.title.total')}: ${bar.totalPaid.toFixed(2)} ${this.currency}`;
             const maybeId = Number(item?.id);
             const month = Math.max(1, Math.round(Number(item?.month)));
             const amount = this.normalizeMoney(Number(item?.amount));
+            const totalPaid = this.normalizeMoney(
+              Number.isFinite(Number(item?.totalPaid)) ? Number(item?.totalPaid) : amount
+            );
+            const requiredDue = this.normalizeMoney(Number(item?.requiredDue));
             const strategy =
               typeof item?.strategy === 'string' && this.isPrepaymentStrategy(item.strategy)
                 ? item.strategy
                 : legacyStrategy;
 
-            if (!Number.isFinite(month) || !Number.isFinite(amount)) {
+            if (!Number.isFinite(month) || !Number.isFinite(totalPaid)) {
               return null;
             }
 
             return {
               id: Number.isInteger(maybeId) && maybeId > 0 ? maybeId : index + 1,
               month,
+              totalPaid,
+              requiredDue,
               amount,
               strategy
             } satisfies ExtraPayment;
           })
-          .filter((item): item is ExtraPayment => item !== null);
+          .filter((item): item is Exclude<typeof item, null> => item !== null);
 
         this.extraPayments = restored;
       }
@@ -1342,6 +1506,8 @@ ${this.t('bar.title.total')}: ${bar.totalPaid.toFixed(2)} ${this.currency}`;
       extraPayments: this.extraPayments.map((item) => ({
         id: item.id,
         month: item.month,
+        totalPaid: item.totalPaid,
+        requiredDue: item.requiredDue,
         amount: item.amount,
         strategy: item.strategy
       }))
